@@ -14,10 +14,10 @@ if __name__ == '__main__':
     train_dataset = COVIDFocusDataset(base_dir=data_dir, split='Train', target_size=(224, 224))
     val_dataset = COVIDFocusDataset(base_dir=data_dir, split='Val', target_size=(224, 224))
 
-    train_loader = DataLoader(train_dataset, batch_size=16, shuffle=True, num_workers=0)
-    val_loader = DataLoader(val_dataset, batch_size=16, shuffle=False, num_workers=0)
+    train_loader = DataLoader(train_dataset, batch_size=256, shuffle=True, num_workers=8)
+    val_loader = DataLoader(val_dataset, batch_size=256, shuffle=False, num_workers=8)
 
-    device = torch.device("cpu")
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"数据加载完成！当前计算设备: {device}")
 
     # 迁移学习：使用预训练的 ResNet-18 模型
