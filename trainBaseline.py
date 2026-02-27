@@ -5,7 +5,7 @@ import torchvision.models as models
 from torch.utils.data import DataLoader
 from dataset import COVIDFocusDataset 
 from tqdm import tqdm
-import matplotlib.pyplot as plt  # 新增：导入画图库
+import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
     data_dir = './dataset'
