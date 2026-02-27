@@ -8,31 +8,27 @@ from torch.utils.data import DataLoader
 from dataset import COVIDFocusDataset 
 
 if __name__ == '__main__':
-    # 1. 加载数据
+    # 加载数据
     dataset = COVIDFocusDataset(
         base_dir='./dataset', 
         split='Train', target_size=(224, 224)
     )
     dataloader = DataLoader(dataset, batch_size=16, shuffle=True, num_workers=0)
 
-    # 2. 硬件加速起飞！(自动识别 Mac 的 Apple Silicon 加速)
     device = torch.device("cpu")
     print(f"当前使用的计算设备: {device}")
 
-    # 3. 召唤经典的 ResNet-18 预训练模型
-    # 我们使用预训练权重 (weights='DEFAULT')，这样它一开始就自带了识别基础图形的能力
+    # ResNet-18 预训练模型
+    # 使用预训练权重 (weights='DEFAULT')，这样它一开始就自带了识别基础图形的能力
     model = models.resnet18(weights=models.ResNet18_Weights.DEFAULT)
 
-    # 4. 魔改网络的最后一层 (分类头)
-    # 原版 ResNet 是为了识别 ImageNet 的 1000 种物体设计的
-    # 我们把最后的全连接层 (fc) 拆掉，换成只有 3 个输出节点的新层 (对应我们的 3 个类别)
+    # 我们把最后的全连接层 (fc) 拆掉，换成只有 3 个输出节点的新层
     num_ftrs = model.fc.in_features
     model.fc = nn.Linear(num_ftrs, 3)
     
     # 把模型搬到显存里
     model = model.to(device)
 
-    # 5. 定义“监考老师” (损失函数)
     # 交叉熵损失函数，最适合做多分类任务
     criterion = nn.CrossEntropyLoss()
 
@@ -41,6 +37,11 @@ if __name__ == '__main__':
     
     # 从数据加载器里抓取一个批次的数据
     images, masks, labels = next(iter(dataloader))
+    
+    # print(f"Images shape: {images.shape}")      # 输出: (32, 3, 224, 224)
+    # print(f"Masks shape: {masks.shape}")        # 输出: (32, 1, 224, 224)
+    # print(f"Labels shape: {labels.shape}")      # 输出: (32,)
+    # print(f"Labels: {labels}")    
     
     # 把数据也搬到对应的设备上
     images = images.to(device)
