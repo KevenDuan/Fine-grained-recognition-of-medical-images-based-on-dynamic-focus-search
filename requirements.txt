@@ -1,0 +1,13 @@
+# 基础依赖
+numpy==1.24.3
+opencv-python==4.8.0.76
+# PyTorch 相关
+torch==2.0.1
+torchvision==0.15.2
+# 可视化与工具
+tqdm==4.65.0
+matplotlib==3.7.2
+# Grad-CAM 相关
+grad-cam==1.5.5
+# 其他
+Pillow==9.5.0
