@@ -10,3 +10,36 @@
 ~$*.doc
 ~$*.xlsx
 ~$*.pptx
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Artifacts
+runs/
+baseline/runs/
+ablation_outputs/
+inference_results/
+training_results*.json
+baseline_training_results*.json
+*.pth
+*.pt
+*.ckpt
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Training artifacts
+runs/
+baseline/runs/
+inference_results/
+training_results.json
+baseline_training_results.json
+*.pth
+*.pt
+*.ckpt

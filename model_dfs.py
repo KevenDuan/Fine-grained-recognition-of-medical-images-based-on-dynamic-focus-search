@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torchvision import models
+import numpy as np
 
 class AttentionBlock(nn.Module):
     def __init__(self, in_channels):
@@ -20,8 +21,12 @@ class AttentionBlock(nn.Module):
         return self.sigmoid(out)
 
 class DynamicFocusNet(nn.Module):
-    def __init__(self, num_classes=3, pretrained=True):
+    def __init__(self, num_classes=3, pretrained=True, input_size=512, crop_size=224, focus_mode='attn', topk=3):
         super(DynamicFocusNet, self).__init__()
+        self.input_size = int(input_size)
+        self.crop_size = int(crop_size)
+        self.focus_mode = str(focus_mode)
+        self.topk = int(topk)
         # Load ResNet18 backbone
         resnet = models.resnet18(pretrained=pretrained)
         
@@ -46,8 +51,9 @@ class DynamicFocusNet(nn.Module):
         self.cls_local = nn.Linear(512, num_classes)
 
     def forward(self, x):
-        # x shape: (B, 3, 512, 512)
         batch_size = x.size(0)
+        input_h = x.size(2)
+        input_w = x.size(3)
         
         # 1. Global Branch
         # Downsample to 224x224 for global view
@@ -60,38 +66,40 @@ class DynamicFocusNet(nn.Module):
         att_map = self.attention(f_global) # (B, 1, 7, 7)
         
         # 2. Focus Mechanism (Crop)
-        # Find peak activation in attention map
-        # Flatten: (B, 49)
         att_flat = att_map.view(batch_size, -1)
-        val, idx = torch.max(att_flat, dim=1)
-        
-        # Convert index to (h, w) coordinates in 7x7 grid
-        h_idx = idx // 7
-        w_idx = idx % 7
-        
-        # Map to original 512x512 space
-        # Grid size 7x7, Image size 224x224 -> Stride 32
-        # But we mapped 512->224. So relative to 512, stride is 32 * (512/224) approx 73?
-        # Let's think in normalized coordinates.
-        # Center of grid cell (h, w): (h + 0.5)/7, (w + 0.5)/7
-        
-        # We want to crop a 224x224 patch from 512x512 image.
-        # Half size = 112.
-        crop_size = 224
+        topk = max(1, self.topk)
+        topk_vals, topk_idx = torch.topk(att_flat, k=min(topk, att_flat.size(1)), dim=1)
+        idx = topk_idx[:, 0]
+        val = topk_vals[:, 0]
+
+        h_idx = idx // att_map.size(-1)
+        w_idx = idx % att_map.size(-1)
+
+        crop_size = self.crop_size
         half_crop = crop_size // 2
-        
-        # Center coordinates in 512 image
-        center_y = (h_idx.float() + 0.5) / 7.0 * 512
-        center_x = (w_idx.float() + 0.5) / 7.0 * 512
-        
-        # Clamp centers to ensure crop is within bounds
-        # min center = 112, max center = 512 - 112 = 400
-        center_y = torch.clamp(center_y, min=half_crop, max=512-half_crop)
-        center_x = torch.clamp(center_x, min=half_crop, max=512-half_crop)
+
+        if self.focus_mode == 'center':
+            center_y = torch.full((batch_size,), float(input_h) / 2.0, device=x.device, dtype=torch.float32)
+            center_x = torch.full((batch_size,), float(input_w) / 2.0, device=x.device, dtype=torch.float32)
+        elif self.focus_mode == 'random':
+            cy = torch.rand((batch_size,), device=x.device, dtype=torch.float32) * float(input_h)
+            cx = torch.rand((batch_size,), device=x.device, dtype=torch.float32) * float(input_w)
+            center_y = cy
+            center_x = cx
+        else:
+            grid_h = att_map.size(-2)
+            grid_w = att_map.size(-1)
+            center_y = (h_idx.float() + 0.5) / float(grid_h) * float(input_h)
+            center_x = (w_idx.float() + 0.5) / float(grid_w) * float(input_w)
+
+        center_y = torch.clamp(center_y, min=float(half_crop), max=float(input_h - half_crop))
+        center_x = torch.clamp(center_x, min=float(half_crop), max=float(input_w - half_crop))
         
         # Perform crop for each image in batch
         x_local_list = []
         top_left_coords = [] # Store for visualization
+        topk_boxes = []
+        topk_weights = []
         
         for i in range(batch_size):
             cy = int(center_y[i].item())
@@ -105,6 +113,25 @@ class DynamicFocusNet(nn.Module):
             crop = x[i:i+1, :, y1:y2, x1:x2]
             x_local_list.append(crop)
             top_left_coords.append((x1, y1, x2, y2))
+
+            boxes_i = []
+            weights_i = []
+            for k in range(topk_idx.size(1)):
+                kk = topk_idx[i, k]
+                hh = int((kk // att_map.size(-1)).item())
+                ww = int((kk % att_map.size(-1)).item())
+                cyk = (float(hh) + 0.5) / float(att_map.size(-2)) * float(input_h)
+                cxk = (float(ww) + 0.5) / float(att_map.size(-1)) * float(input_w)
+                cyk = float(np.clip(cyk, half_crop, input_h - half_crop))
+                cxk = float(np.clip(cxk, half_crop, input_w - half_crop))
+                y1k = int(cyk - half_crop)
+                y2k = int(cyk + half_crop)
+                x1k = int(cxk - half_crop)
+                x2k = int(cxk + half_crop)
+                boxes_i.append((x1k, y1k, x2k, y2k))
+                weights_i.append(float(topk_vals[i, k].item()))
+            topk_boxes.append(boxes_i)
+            topk_weights.append(weights_i)
             
         x_local = torch.cat(x_local_list, dim=0) # (B, 3, 224, 224)
         
@@ -130,5 +157,8 @@ class DynamicFocusNet(nn.Module):
             'pred_local': pred_local,
             'att_map': att_map,
             'crop_coords': top_left_coords,
+            'topk_coords': topk_boxes,
+            'topk_weights': topk_weights,
+            'focus_score': val.detach().cpu().tolist(),
             'feat_fused': feat_fused
         }

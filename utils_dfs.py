@@ -58,16 +58,18 @@ def plot_training_curves(train_losses, val_losses, train_accs, val_accs, save_pa
     plt.savefig(save_path)
     plt.close()
 
-def visualize_attention(img_tensor, att_map, crop_coords, save_path):
-    """
-    Visualize original image, attention map, and crop box.
-    img_tensor: (3, H, W) normalized
-    att_map: (1, 7, 7)
-    crop_coords: (x1, y1, x2, y2)
-    """
-    # Denormalize image
-    img = img_tensor.permute(1, 2, 0).cpu().numpy()
-    img = (img * 255).astype(np.uint8).copy()
+def visualize_attention(img_tensor, att_map, crop_coords, save_path, mean=None, std=None, alpha=0.4):
+    img = img_tensor.detach().float().cpu()
+    if mean is None:
+        mean = [0.485, 0.456, 0.406]
+    if std is None:
+        std = [0.229, 0.224, 0.225]
+    mean_t = torch.tensor(mean, dtype=img.dtype).view(1, 1, 3)
+    std_t = torch.tensor(std, dtype=img.dtype).view(1, 1, 3)
+    img = img.permute(1, 2, 0)
+    img = img * std_t + mean_t
+    img = img.clamp(0, 1)
+    img = (img.numpy() * 255).astype(np.uint8).copy()
     
     # Resize attention map to image size
     att = att_map.squeeze().cpu().numpy()
@@ -76,7 +78,7 @@ def visualize_attention(img_tensor, att_map, crop_coords, save_path):
     att_heatmap = cv2.applyColorMap(att, cv2.COLORMAP_JET)
     
     # Superimpose
-    heatmap_img = cv2.addWeighted(img, 0.6, att_heatmap, 0.4, 0)
+    heatmap_img = cv2.addWeighted(img, 1.0 - alpha, att_heatmap, alpha, 0)
     
     # Draw crop box
     x1, y1, x2, y2 = crop_coords

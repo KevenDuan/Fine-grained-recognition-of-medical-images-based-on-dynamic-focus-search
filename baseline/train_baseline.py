@@ -1,3 +1,6 @@
+from typing import Any
+
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -43,7 +46,7 @@ if __name__ == '__main__':
         model.train()
         running_loss = 0.0
         
-        pbar_train = tqdm(train_loader, desc="[训练阶段]", unit="batch")
+        pbar_train = tqdm[Any](train_loader, desc="[训练阶段]", unit="batch")
         for images, masks, labels in pbar_train:
             images, labels = images.to(device), labels.to(device)
             
