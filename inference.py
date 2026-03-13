@@ -101,10 +101,10 @@ class DynamicFocusPredictor:
 if __name__ == '__main__':
     # Example usage
     # Assuming we have a trained model (which we don't yet, so this will warn)
-    predictor = DynamicFocusPredictor('runs/fold_1/best_model.pth')
+    predictor = DynamicFocusPredictor('/root/autodl-tmp/Fine-grained-recognition-of-medical-images-based-on-dynamic-focus-search/runs/fold_1/best_model.pth')
     
     # Test on a few images from dataset if available
-    test_dir = 'dataset/Test/COVID-19/images'
+    test_dir = '/root/autodl-tmp/Fine-grained-recognition-of-medical-images-based-on-dynamic-focus-search/dataset/Test/COVID-19/images'
     if os.path.exists(test_dir):
         print(f"Running inference on {test_dir}...")
         predictor.predict_batch(test_dir, 'inference_results')

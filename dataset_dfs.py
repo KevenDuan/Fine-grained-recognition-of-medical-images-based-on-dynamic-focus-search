@@ -75,15 +75,14 @@ class DynamicFocusDataset(Dataset):
         else:
             return img, label
 
-def get_all_samples(root_dir):
+def get_all_samples(root_dir, splits=('Train',)):
     """
     Traverse dataset directory to get all samples
     """
     classes = ['COVID-19', 'Non-COVID', 'Normal']
     samples = []
     
-    # Traverse both Train and Test directories
-    for split in ['Train', 'Test']:
+    for split in splits:
         split_dir = os.path.join(root_dir, split)
         if not os.path.exists(split_dir):
             continue
