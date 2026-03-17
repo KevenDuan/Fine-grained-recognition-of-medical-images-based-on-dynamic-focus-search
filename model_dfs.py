@@ -11,14 +11,14 @@ class AttentionBlock(nn.Module):
         self.bn1 = nn.BatchNorm2d(512)
         self.relu = nn.ReLU(inplace=True)
         self.conv2 = nn.Conv2d(512, 1, kernel_size=1)
-        self.sigmoid = nn.Sigmoid()
+        # 🚨 删掉 self.sigmoid = nn.Sigmoid() 这一行
 
     def forward(self, x):
         out = self.conv1(x)
         out = self.bn1(out)
         out = self.relu(out)
         out = self.conv2(out)
-        return self.sigmoid(out)
+        return out  # 🚨 删掉 self.sigmoid()，直接返回 out
 
 class DynamicFocusNet(nn.Module):
     def __init__(self, num_classes=3, pretrained=True, input_size=512, crop_size=224, focus_mode='attn', topk=3):

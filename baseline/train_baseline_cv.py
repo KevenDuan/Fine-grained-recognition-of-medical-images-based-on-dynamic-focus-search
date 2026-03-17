@@ -327,7 +327,7 @@ def main():
         scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=NUM_EPOCHS)
         scaler = GradScaler()
         criterion = nn.CrossEntropyLoss()
-        ema = EMA(model, decay=0.999)
+        ema = EMA(model, decay=0.9)
 
         run_dir = os.path.join(PROJECT_DIR, RUNS_ROOT, EXP_NAME, f'fold_{fold+1}')
         os.makedirs(run_dir, exist_ok=True)

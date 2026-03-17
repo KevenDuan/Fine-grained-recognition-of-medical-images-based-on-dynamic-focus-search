@@ -304,10 +304,11 @@ def main():
         scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=NUM_EPOCHS)
         scaler = GradScaler() # For AMP
         criterion = nn.CrossEntropyLoss()
-        att_criterion = nn.BCELoss()
+        # 🚨 将 nn.BCELoss() 改为下面这个防弹版：
+        att_criterion = nn.BCEWithLogitsLoss()
         
         # EMA
-        ema = EMA(model, decay=0.999)
+        ema = EMA(model, decay=0.9)
         
         # TensorBoard
         run_dir = os.path.join(project_dir, RUNS_ROOT, EXP_NAME, f'fold_{fold+1}')
