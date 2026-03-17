@@ -45,8 +45,8 @@ RUNS_ROOT = os.path.join('baseline', 'runs')
 EXP_NAME = 'baseline'
 
 DEVICE = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-if torch.backends.mps.is_available():
-    DEVICE = torch.device('mps')
+# if torch.backends.mps.is_available():
+#     DEVICE = torch.device('mps')
 
 CLASSES = ['COVID-19', 'Non-COVID', 'Normal']
 
